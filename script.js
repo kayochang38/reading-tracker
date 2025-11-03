@@ -1,69 +1,104 @@
-// === Reading Tracker JS ===
-// Google Apps ScriptのデプロイURLをここに貼る
-const gasUrl = "https://script.google.com/macros/s/AKfycbztXC-aATn37POxGaAj4PFmzKFo26bneQOJEScn4_gfx3gtd7Y_KpQlMNdglGHCPwf9/exec";
-
+const gasUrl = "https://script.google.com/macros/s/AKfycbxi-4SNxOb-DTf0L2YC3COLhkCkrBzhJHzCk85fi7a8XTPiR6BKkCCQFhLqckrK3P6X/exec"; // ← あなたのGAS URL
+let sheetUrl = "";
 let sessionId = null;
 let readingActive = false;
 
+// 要素取得
+const testBtn = document.getElementById("testBtn");
 const startBtn = document.getElementById("startBtn");
 const endBtn = document.getElementById("endBtn");
+const connectionStatus = document.getElementById("connectionStatus");
 const status = document.getElementById("status");
+const urlInput = document.getElementById("sheetUrl");
 
-// --- 読書開始 ---
-startBtn.addEventListener("click", () => {
-  const title = document.getElementById("title").value.trim();
-  if (!title) {
-    alert("タイトルを入力してください。");
-    return;
+// ✅ ページ読み込み時にlocalStorageから復元
+window.addEventListener("DOMContentLoaded", () => {
+  const savedUrl = localStorage.getItem("sheetUrl");
+  if (savedUrl) {
+    urlInput.value = savedUrl;
   }
+});
+
+// ✅ 接続テスト
+testBtn.addEventListener("click", () => {
+  sheetUrl = urlInput.value.trim();
+  if (!sheetUrl) return alert("スプレッドシートのURLを入力してください。");
+
+  // 保存
+  localStorage.setItem("sheetUrl", sheetUrl);
+
+  connectionStatus.textContent = "接続テスト中...";
+  connectionStatus.className = "status";
 
   fetch(gasUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "start", title })
+    body: JSON.stringify({ action: "test", sheetUrl })
+  })
+    .then(res => res.text())
+    .then(res => {
+      if (res === "Connection OK") {
+        connectionStatus.textContent = "✅ 接続成功しました！";
+        connectionStatus.classList.add("success");
+        startBtn.disabled = false;
+      } else {
+        connectionStatus.textContent = "⚠️ 接続できません。URLを確認してください。";
+        connectionStatus.classList.add("error");
+        startBtn.disabled = true;
+      }
+    })
+    .catch(() => {
+      connectionStatus.textContent = "⚠️ 通信エラーが発生しました。";
+      connectionStatus.classList.add("error");
+      startBtn.disabled = true;
+    });
+});
+
+// 📖 読書開始
+startBtn.addEventListener("click", () => {
+  const title = document.getElementById("title").value.trim();
+  if (!title) return alert("タイトルを入力してください。");
+
+  fetch(gasUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "start", title, sheetUrl })
   })
     .then(res => res.text())
     .then(id => {
       sessionId = id;
       readingActive = true;
-      status.textContent = "読書中...";
       startBtn.disabled = true;
       endBtn.disabled = false;
-      document.body.style.backgroundColor = "#f2fff2";
+      status.textContent = "📚 読書中...";
     })
     .catch(() => {
-      status.textContent = "通信エラー。もう一度試してください。";
+      status.textContent = "⚠️ 通信に失敗しました。";
     });
 });
 
-// --- 読書終了 ---
+// 🏁 読書終了
 endBtn.addEventListener("click", () => {
-  if (!sessionId) {
-    alert("セッション情報が見つかりません。");
-    return;
-  }
-
+  if (!sessionId) return;
   fetch(gasUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "end", sessionId })
+    body: JSON.stringify({ action: "end", sessionId, sheetUrl })
   })
     .then(res => res.text())
     .then(() => {
-      status.textContent = "記録しました ✅";
+      readingActive = false;
       startBtn.disabled = false;
       endBtn.disabled = true;
-      readingActive = false;
+      status.textContent = "✅ 記録しました。";
       sessionId = null;
-      document.body.style.backgroundColor = "#f9f9f9";
-      document.getElementById("title").value = "";
     })
     .catch(() => {
-      status.textContent = "送信エラー。";
+      status.textContent = "⚠️ 通信に失敗しました。";
     });
 });
 
-// --- 閉じる前の警告 ---
+// ⚠️ ページ離脱時の警告
 window.addEventListener("beforeunload", (event) => {
   if (readingActive) {
     event.preventDefault();
