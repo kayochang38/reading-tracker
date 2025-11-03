@@ -1,64 +1,135 @@
+/* --- ベース --- */
 body {
-  font-family: 'Segoe UI', 'Hiragino Sans', sans-serif;
-  background-color: #f8f8f8;
+  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  background-color: #fafafa;
   margin: 0;
   padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+  color: #333;
 }
 
+/* --- レイアウト --- */
 .container {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  width: 90%;
-  max-width: 420px;
+  max-width: 480px;
+  margin: 2em auto;
+  padding: 2em;
   text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-input {
+/* --- 見出しとテキスト --- */
+h1 {
+  font-size: 1.6em;
+  margin-bottom: 0.8em;
+}
+
+p {
+  line-height: 1.6;
+  margin: 0.5em 0;
+}
+
+/* --- 入力フォーム --- */
+input[type="text"] {
   width: 100%;
-  padding: 0.6rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid #ccc;
+  padding: 0.6em;
+  margin-top: 0.4em;
+  box-sizing: border-box;
   border-radius: 6px;
-  font-size: 1rem;
+  border: 1px solid #ccc;
+  font-size: 1em;
 }
 
+/* --- 接続テストボタン（幅控えめ） --- */
+#testBtn {
+  width: auto;
+  padding: 0.6em;
+  margin-top: 0.6em;
+  background-color: #2196f3;
+}
+
+#testBtn:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+/* --- ボタン全体を同じ幅に整える --- */
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6em;
+  margin-top: 1em;
+}
+
+/* --- 共通ボタンスタイル --- */
 button {
-  padding: 0.6rem 1.2rem;
-  margin: 0.3rem;
-  font-size: 1rem;
+  flex: 1;
+  padding: 0.6em;
   border: none;
   border-radius: 6px;
   background-color: #4caf50;
   color: white;
+  font-size: 1em;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color 0.2s ease;
 }
 
-button:hover {
+/* --- 有効時のhover --- */
+button:hover:not(:disabled) {
   background-color: #43a047;
 }
 
-button:disabled {
-  background-color: #bdbdbd;
+/* --- サブボタン（履歴クリア） --- */
+button.sub {
+  display: block;
+  width: 100%;
+  margin-top: 0.6em;
+  background-color: #9e9e9e;
+}
+
+button.sub:hover:not(:disabled) {
+  background-color: #757575;
+}
+
+/* --- 無効ボタン --- */
+button:disabled,
+.buttons button:disabled,
+button.sub:disabled {
+  background-color: #ccc;
+  color: #666;
   cursor: not-allowed;
+  opacity: 0.8;
+  box-shadow: none;
+  pointer-events: none; /* ✅ hover・クリックを完全無効化 */
 }
 
+/* --- ステータスメッセージ --- */
 .status {
-  font-size: 0.9rem;
-  margin-top: 0.8rem;
+  margin-top: 0.8em;
+  font-size: 0.9em;
 }
 
-.status.success {
+.success {
   color: #2e7d32;
 }
 
-.status.error {
+.error {
   color: #c62828;
+}
+
+/* --- 区切り線 --- */
+hr {
+  margin: 1.5em 0;
+  border: none;
+  border-top: 1px solid #ddd;
+}
+
+/* --- モバイル対応 --- */
+@media (max-width: 480px) {
+  .buttons {
+    flex-direction: column;
+  }
+
+  .buttons button {
+    width: 100%;
+  }
 }
