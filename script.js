@@ -1,167 +1,224 @@
-// === GAS接続先（proxy.php経由） ===
-const gasUrl = "https://laboratomie.com/proxy.php";
+// ===========================
+// 📚 Reading Tracker Script
+// ===========================
 
-let sheetUrl = "";
-let sessionId = null;
-let readingActive = false;
-
-// DOM要素
+// --- 要素取得 ---
+const sheetUrlInput = document.getElementById("sheetUrl");
 const testBtn = document.getElementById("testBtn");
+const connectionStatus = document.getElementById("connectionStatus");
+
+const titleInput = document.getElementById("title");
 const startBtn = document.getElementById("startBtn");
 const endBtn = document.getElementById("endBtn");
-const clearTitlesBtn = document.getElementById("clearTitlesBtn");
-const connectionStatus = document.getElementById("connectionStatus");
-const status = document.getElementById("status");
-const urlInput = document.getElementById("sheetUrl");
-const titleInput = document.getElementById("title");
+const statusMsg = document.getElementById("status");
 
-// --- localStorageから復元 ---
-window.addEventListener("DOMContentLoaded", () => {
-  const savedUrl = localStorage.getItem("sheetUrl");
-  if (savedUrl) urlInput.value = savedUrl;
+const clearBtn = document.getElementById("clearTitlesBtn");
+const suggestionList = document.getElementById("titleSuggestions");
 
-  // タイトル履歴を datalist にセット
-  updateTitleList();
-});
+// --- 初期化 ---
+let gasUrl = "";
+let sessionId = null;
+let savedTitles = JSON.parse(localStorage.getItem("titles") || "[]");
 
-function updateTitleList() {
-  // 既存 datalist を削除して再生成
-  let dataList = document.getElementById("titleSuggestions");
-  if (dataList) dataList.remove();
+// 初期UI設定
+updateClearButtonState();
+loadSavedSheetUrl();
+populateTitleSuggestions();
 
-  const savedTitles = JSON.parse(localStorage.getItem("titles") || "[]");
-  dataList = document.createElement("datalist");
-  dataList.id = "titleSuggestions";
+// ===========================
+// 🚀 スプレッドシート接続テスト
+// ===========================
+testBtn.addEventListener("click", async () => {
+  const sheetUrl = sheetUrlInput.value.trim();
+  if (!sheetUrl) {
+    alert("スプレッドシートのURLを入力してください。");
+    return;
+  }
 
-  savedTitles.forEach(title => {
-    const option = document.createElement("option");
-    option.value = title;
-    dataList.appendChild(option);
-  });
+  try {
+    connectionStatus.textContent = "接続を確認中...";
+    connectionStatus.className = "status";
 
-  document.body.appendChild(dataList);
-  titleInput.setAttribute("list", "titleSuggestions");
-}
+    const response = await fetch(getGasExecUrl(), {
+      method: "POST",
+      body: JSON.stringify({ action: "test", sheetUrl }),
+    });
 
-// --- 履歴をクリア ---
-clearTitlesBtn.addEventListener("click", () => {
-  if (confirm("保存されているタイトル履歴をすべて削除しますか？")) {
-    localStorage.removeItem("titles");
-    updateTitleList();
-    alert("タイトル履歴をクリアしました。");
+    const result = await response.text();
+    console.log("接続テスト結果:", result);
+
+    if (result === "OK_EDITABLE") {
+      connectionStatus.textContent = "✅ 接続成功（編集権限あり）";
+      connectionStatus.className = "status success";
+      localStorage.setItem("sheetUrl", sheetUrl);
+      gasUrl = getGasExecUrl();
+      startBtn.disabled = false;
+
+    } else if (result === "ERROR_NO_PERMISSION") {
+      connectionStatus.textContent = "⚠️ スプレッドシートは閲覧専用のため接続できません。";
+      connectionStatus.className = "status error";
+      startBtn.disabled = true;
+
+    } else if (result === "ERROR_NO_ACCESS") {
+      connectionStatus.textContent = "❌ スプレッドシートが非公開のためアクセスできません。";
+      connectionStatus.className = "status error";
+      startBtn.disabled = true;
+
+    } else if (result === "ERROR_INVALID_SHEET") {
+      connectionStatus.textContent = "❌ URLが無効またはスプレッドシートが存在しません。";
+      connectionStatus.className = "status error";
+      startBtn.disabled = true;
+
+    } else {
+      connectionStatus.textContent = "❌ 予期しないエラーが発生しました。";
+      connectionStatus.className = "status error";
+      startBtn.disabled = true;
+    }
+  } catch (error) {
+    console.error(error);
+    connectionStatus.textContent = "❌ 通信エラーが発生しました。";
+    connectionStatus.className = "status error";
   }
 });
 
-// --- 接続テスト ---
-testBtn.addEventListener("click", () => {
-  sheetUrl = urlInput.value.trim();
-  if (!sheetUrl) return alert("スプレッドシートのURLを入力してください。");
-
-  localStorage.setItem("sheetUrl", sheetUrl);
-
-  connectionStatus.textContent = "接続テスト中...";
-  connectionStatus.className = "status";
-
-  fetch(gasUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "test", sheetUrl })
-  })
-    .then(res => res.text())
-    .then(res => {
-      if (res === "Connection OK") {
-        connectionStatus.textContent = "✅ 接続成功しました！";
-        connectionStatus.classList.add("success");
-        startBtn.disabled = false;
-      } else {
-        connectionStatus.textContent = "⚠️ 接続できません。URLを確認してください。";
-        connectionStatus.classList.add("error");
-      }
-    })
-    .catch(() => {
-      connectionStatus.textContent = "⚠️ 通信エラーが発生しました。";
-      connectionStatus.classList.add("error");
-    });
-});
-
-// --- 読書開始 ---
-function startReading() {
+// ===========================
+// 📖 読書開始
+// ===========================
+startBtn.addEventListener("click", async () => {
   const title = titleInput.value.trim();
-  if (!title) return alert("タイトルを入力してください。");
+  if (!title) {
+    alert("タイトルを入力してください。");
+    return;
+  }
 
-  fetch(gasUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "start", title, sheetUrl })
-  })
-    .then(res => res.text())
-    .then(id => {
-      sessionId = id;
-      readingActive = true;
+  const sheetUrl = sheetUrlInput.value.trim() || localStorage.getItem("sheetUrl");
+  if (!sheetUrl) {
+    alert("スプレッドシートのURLが設定されていません。");
+    return;
+  }
+
+  try {
+    statusMsg.textContent = "開始を記録中...";
+    const response = await fetch(getGasExecUrl(), {
+      method: "POST",
+      body: JSON.stringify({ action: "start", title, sheetUrl }),
+    });
+
+    const result = await response.text();
+    if (result && result !== "Invalid action") {
+      sessionId = result;
+      statusMsg.textContent = "📗 読書中...";
+      statusMsg.className = "status success";
+
       startBtn.disabled = true;
       endBtn.disabled = false;
-      status.textContent = "📖 読書中...";
 
-      // タイトル履歴に追加
-      const saved = JSON.parse(localStorage.getItem("titles") || "[]");
-      if (!saved.includes(title)) {
-        saved.push(title);
-        localStorage.setItem("titles", JSON.stringify(saved));
+      // タイトルを履歴に保存
+      if (!savedTitles.includes(title)) {
+        savedTitles.push(title);
+        localStorage.setItem("titles", JSON.stringify(savedTitles));
+        populateTitleSuggestions();
       }
-      updateTitleList();
-    })
-    .catch(() => {
-      status.textContent = "⚠️ 通信に失敗しました。";
-    });
-}
 
-startBtn.addEventListener("click", startReading);
-
-// --- Enterキーで読書開始 ---
-titleInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !startBtn.disabled) {
-    startReading();
+      updateClearButtonState(); // ✅ 履歴追加後に有効化
+    } else {
+      throw new Error(result);
+    }
+  } catch (error) {
+    console.error(error);
+    statusMsg.textContent = "❌ 開始に失敗しました";
+    statusMsg.className = "status error";
   }
 });
 
-// --- 読書終了 ---
-endBtn.addEventListener("click", () => {
-  if (!sessionId) return;
+// ===========================
+// 📕 読書終了
+// ===========================
+endBtn.addEventListener("click", async () => {
+  if (!sessionId) {
+    alert("開始セッションがありません。");
+    return;
+  }
 
-  // 読書終了を送信
-  fetch(gasUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action: "end",
-      sessionId,
-      sheetUrl
-    })
-  })
-    .then(res => res.text())
-    .then(res => {
-      // --- #NUM! 対策 ---
-      // GAS側で安全処理済みだが、念のためNaN防止チェックを追加
-      if (res.includes("Error") || res.includes("NUM")) {
-        status.textContent = "⚠️ 計算エラーが発生しました（1分として記録されます）。";
-      } else {
-        status.textContent = "✅ 記録しました。";
-      }
+  try {
+    statusMsg.textContent = "終了を記録中...";
+    const sheetUrl = sheetUrlInput.value.trim() || localStorage.getItem("sheetUrl");
 
-      readingActive = false;
+    const response = await fetch(getGasExecUrl(), {
+      method: "POST",
+      body: JSON.stringify({ action: "end", sessionId, sheetUrl }),
+    });
+
+    const result = await response.text();
+    if (result.includes("End logged")) {
+      statusMsg.textContent = "✅ 終了を記録しました";
+      statusMsg.className = "status success";
       startBtn.disabled = false;
       endBtn.disabled = true;
       sessionId = null;
-    })
-    .catch(() => {
-      status.textContent = "⚠️ 通信に失敗しました。";
-    });
+    } else {
+      throw new Error(result);
+    }
+  } catch (error) {
+    console.error(error);
+    statusMsg.textContent = "❌ 終了に失敗しました";
+    statusMsg.className = "status error";
+  }
 });
 
-// --- ページ離脱時の警告 ---
-window.addEventListener("beforeunload", (event) => {
-  if (readingActive) {
-    event.preventDefault();
-    event.returnValue = "終了ボタンを押してから閉じてください。";
+// ===========================
+// 🧹 履歴クリア機能
+// ===========================
+clearBtn.addEventListener("click", () => {
+  if (savedTitles.length === 0) return;
+
+  const confirmClear = confirm("タイトル履歴をすべて削除しますか？");
+  if (!confirmClear) return;
+
+  savedTitles = [];
+  localStorage.removeItem("titles");
+  suggestionList.innerHTML = "";
+  updateClearButtonState(); // ✅ 無効化
+});
+
+// ===========================
+// 🧩 関連関数
+// ===========================
+
+// GAS実行URL（公開済みWebアプリURL）
+function getGasExecUrl() {
+  // 公開URLをここに設定（例）
+  return "https://script.google.com/macros/s/AKfycbxi-4SNxOb-DTf0L2YC3COLhkCkrBzhJHzCk85fi7a8XTPiR6BKkCCQFhLqckrK3P6X/exec";
+}
+
+// スプレッドシートURLの読み込み
+function loadSavedSheetUrl() {
+  const savedUrl = localStorage.getItem("sheetUrl");
+  if (savedUrl) {
+    sheetUrlInput.value = savedUrl;
+    gasUrl = getGasExecUrl();
+    startBtn.disabled = false;
+  }
+}
+
+// 履歴からサジェストを再生成
+function populateTitleSuggestions() {
+  suggestionList.innerHTML = "";
+  savedTitles.forEach((t) => {
+    const option = document.createElement("option");
+    option.value = t;
+    suggestionList.appendChild(option);
+  });
+}
+
+// 履歴クリアボタンの有効・無効切り替え
+function updateClearButtonState() {
+  clearBtn.disabled = savedTitles.length === 0;
+}
+
+// Enterキーで「読書開始」を押せるように
+titleInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter" && !startBtn.disabled) {
+    startBtn.click();
   }
 });
