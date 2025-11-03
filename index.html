@@ -1,30 +1,46 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reading Tracker</title>
-  <link rel="stylesheet" href="style.css">
+
+  <!-- ✅ favicon類：index.htmlと同じディレクトリに icon.png を配置 -->
+  <link rel="icon" href="https://laboratomie.com/reading-tracker/icon.png" sizes="32x32" />
+  <link rel="icon" href="https://laboratomie.com/reading-tracker/icon.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="https://laboratomie.com/reading-tracker/icon.png" />
+  <link rel="shortcut icon" href="https://laboratomie.com/reading-tracker/icon.png" />
+  <meta property="og:image" content="https://laboratomie.com/reading-tracker/icon.png" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
+
     <h1>📚 Reading Tracker 📚</h1>
 
-    <p>GoogleスプレッドシートのURLを入力して<br>接続を確認してください。</p>
-    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/～">
+    <p>スプレッドシートのURLを入力して<br>接続を確認してください。</p>
+    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/～" />
     <button id="testBtn">接続テスト</button>
     <p id="connectionStatus" class="status"></p>
 
-    <hr>
+    <hr />
 
     <p>タイトルを入力して読書時間を記録します。</p>
-    <input type="text" id="title" placeholder="本のタイトルを入力">
+    <input type="text" id="title" placeholder="本のタイトルを入力" list="titleSuggestions" />
+
     <div class="buttons">
       <button id="startBtn" disabled>読書開始</button>
       <button id="endBtn" disabled>読書終了</button>
     </div>
+
+    <button id="clearTitlesBtn" class="sub">タイトル履歴をクリア</button>
+
     <p id="status" class="status"></p>
   </div>
+
+  <datalist id="titleSuggestions"></datalist>
 
   <script src="script.js"></script>
 </body>
