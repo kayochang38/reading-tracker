@@ -8,16 +8,21 @@
 </head>
 <body>
   <div class="container">
-    <h1>📚 Reading Tracker</h1>
-    <p>読書タイトルを入力して、<br>「開始」→「終了」を押すだけ。</p>
+    <h1>📚 Reading Tracker 📚</h1>
 
-    <input type="text" id="title" placeholder="本のタイトルを入力" />
-    
+    <p>GoogleスプレッドシートのURLを入力して<br>接続を確認してください。</p>
+    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/～">
+    <button id="testBtn">接続テスト</button>
+    <p id="connectionStatus" class="status"></p>
+
+    <hr>
+
+    <p>タイトルを入力して読書時間を記録します。</p>
+    <input type="text" id="title" placeholder="本のタイトルを入力">
     <div class="buttons">
-      <button id="startBtn">読書開始</button>
+      <button id="startBtn" disabled>読書開始</button>
       <button id="endBtn" disabled>読書終了</button>
     </div>
-
     <p id="status" class="status"></p>
   </div>
 
