@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reading Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📚 Reading Tracker</h1>
+    <p>読書タイトルを入力して、<br>「開始」→「終了」を押すだけ。</p>
+
+    <input type="text" id="title" placeholder="本のタイトルを入力" />
+    
+    <div class="buttons">
+      <button id="startBtn">読書開始</button>
+      <button id="endBtn" disabled>読書終了</button>
+    </div>
+
+    <p id="status" class="status"></p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
