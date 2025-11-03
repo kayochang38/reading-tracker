@@ -1,5 +1,5 @@
 // === GAS接続先（proxy.php経由） ===
-const gasUrl = "https://laboratomie.com/proxy.php"; // ← proxy設置URLに合わせてね
+const gasUrl = "https://laboratomie.com/proxy.php";
 
 let sheetUrl = "";
 let sessionId = null;
@@ -131,3 +131,4 @@ window.addEventListener("beforeunload", (event) => {
     event.returnValue = "終了ボタンを押してから閉じてください。";
   }
 });
+
