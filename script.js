@@ -1,30 +1,42 @@
-const gasUrl = "https://script.google.com/macros/s/AKfycbxi-4SNxOb-DTf0L2YC3COLhkCkrBzhJHzCk85fi7a8XTPiR6BKkCCQFhLqckrK3P6X/exec"; // ← あなたのGAS URL
+// === GAS接続先（proxy.php経由） ===
+const gasUrl = "https://laboratomie.com/proxy.php"; // ← proxy設置URLに合わせてね
+
 let sheetUrl = "";
 let sessionId = null;
 let readingActive = false;
 
-// 要素取得
+// DOM取得
 const testBtn = document.getElementById("testBtn");
 const startBtn = document.getElementById("startBtn");
 const endBtn = document.getElementById("endBtn");
 const connectionStatus = document.getElementById("connectionStatus");
 const status = document.getElementById("status");
 const urlInput = document.getElementById("sheetUrl");
+const titleInput = document.getElementById("title");
 
-// ✅ ページ読み込み時にlocalStorageから復元
+// --- 🔄 localStorageから復元 ---
 window.addEventListener("DOMContentLoaded", () => {
   const savedUrl = localStorage.getItem("sheetUrl");
-  if (savedUrl) {
-    urlInput.value = savedUrl;
-  }
+  if (savedUrl) urlInput.value = savedUrl;
+
+  // 過去タイトルの履歴を datalist に追加
+  const savedTitles = JSON.parse(localStorage.getItem("titles") || "[]");
+  const dataList = document.createElement("datalist");
+  dataList.id = "titleSuggestions";
+  savedTitles.forEach(title => {
+    const option = document.createElement("option");
+    option.value = title;
+    dataList.appendChild(option);
+  });
+  document.body.appendChild(dataList);
+  titleInput.setAttribute("list", "titleSuggestions");
 });
 
-// ✅ 接続テスト
+// --- ⚡ 接続テスト ---
 testBtn.addEventListener("click", () => {
   sheetUrl = urlInput.value.trim();
   if (!sheetUrl) return alert("スプレッドシートのURLを入力してください。");
 
-  // 保存
   localStorage.setItem("sheetUrl", sheetUrl);
 
   connectionStatus.textContent = "接続テスト中...";
@@ -44,19 +56,17 @@ testBtn.addEventListener("click", () => {
       } else {
         connectionStatus.textContent = "⚠️ 接続できません。URLを確認してください。";
         connectionStatus.classList.add("error");
-        startBtn.disabled = true;
       }
     })
     .catch(() => {
       connectionStatus.textContent = "⚠️ 通信エラーが発生しました。";
       connectionStatus.classList.add("error");
-      startBtn.disabled = true;
     });
 });
 
-// 📖 読書開始
-startBtn.addEventListener("click", () => {
-  const title = document.getElementById("title").value.trim();
+// --- 📚 読書開始 ---
+function startReading() {
+  const title = titleInput.value.trim();
   if (!title) return alert("タイトルを入力してください。");
 
   fetch(gasUrl, {
@@ -70,14 +80,30 @@ startBtn.addEventListener("click", () => {
       readingActive = true;
       startBtn.disabled = true;
       endBtn.disabled = false;
-      status.textContent = "📚 読書中...";
+      status.textContent = "📖 読書中...";
+
+      // タイトルを履歴に保存
+      const saved = JSON.parse(localStorage.getItem("titles") || "[]");
+      if (!saved.includes(title)) {
+        saved.push(title);
+        localStorage.setItem("titles", JSON.stringify(saved));
+      }
     })
     .catch(() => {
       status.textContent = "⚠️ 通信に失敗しました。";
     });
+}
+
+startBtn.addEventListener("click", startReading);
+
+// --- 💡 Enterキーで読書開始 ---
+titleInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !startBtn.disabled) {
+    startReading();
+  }
 });
 
-// 🏁 読書終了
+// --- 🏁 読書終了 ---
 endBtn.addEventListener("click", () => {
   if (!sessionId) return;
   fetch(gasUrl, {
@@ -98,7 +124,7 @@ endBtn.addEventListener("click", () => {
     });
 });
 
-// ⚠️ ページ離脱時の警告
+// --- ⚠️ ページ離脱時警告 ---
 window.addEventListener("beforeunload", (event) => {
   if (readingActive) {
     event.preventDefault();
