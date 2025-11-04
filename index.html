@@ -1,47 +1,72 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Reading Tracker</title>
 
-  <!-- ✅ favicon類：index.htmlと同じディレクトリに icon.png を配置 -->
-  <link rel="icon" href="https://laboratomie.com/reading-tracker/icon.png" sizes="32x32" />
-  <link rel="icon" href="https://laboratomie.com/reading-tracker/icon.png" sizes="192x192" />
-  <link rel="apple-touch-icon" href="https://laboratomie.com/reading-tracker/icon.png" />
-  <link rel="shortcut icon" href="https://laboratomie.com/reading-tracker/icon.png" />
-  <meta property="og:image" content="https://laboratomie.com/reading-tracker/icon.png" />
-  <meta name="theme-color" content="#ffffff" />
+  <!-- ▼ Web / Mobile ショートカットアイコン設定 -->
+  <link rel="icon" type="image/png" sizes="32x32" href="./icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+  <meta name="theme-color" content="#d6c1a4">
+  <meta name="msapplication-TileImage" content="./icon.png">
+  <meta name="msapplication-TileColor" content="#d6c1a4">
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="container">
+  <main class="container">
+    <h1><img src="./icon.png" alt="" class="logo-icon"> Reading Tracker</h1>
 
-    <h1>📚 Reading Tracker 📚</h1>
+    <section class="card">
+      <label for="sheetUrl">スプレッドシートのURL</label>
+      <input id="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/...." autocomplete="off">
+      <small class="hint">一度入力するとブラウザに保存されます（変更可）</small>
+    </section>
 
-    <p>スプレッドシートのURLを入力して<br>接続を確認してください。</p>
-    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/～" />
-    <button id="testBtn">接続テスト</button>
-    <p id="connectionStatus" class="status"></p>
+    <section class="card">
+      <label for="titleInput">書籍タイトル</label>
+      <input id="titleInput" type="text" placeholder="例：真夜中のスパゲティ（小説）" autocomplete="off">
+      <div id="titleHistoryWrap" class="history-wrap">
+        <details>
+          <summary>最近のタイトル</summary>
+          <ul id="titleHistory"></ul>
+        </details>
+        <button id="clearHistoryBtn" class="ghost">タイトル履歴をクリア</button>
+      </div>
+    </section>
 
-    <hr />
+    <section class="card">
+      <div class="button-row">
+        <button id="startBtn" class="primary">開始</button>
+        <button id="endBtn" class="danger" disabled>終了</button>
+        <button id="verifyBtn" class="secondary">照合</button>
+        <button id="muteBtn" class="unmuted">🔈 ミュート解除中</button>
+      </div>
+      <div id="timer" class="timer">経過 00:00</div>
+      <div id="status" class="status"></div>
+    </section>
 
-    <p>タイトルを入力して読書時間を記録します。</p>
-    <input type="text" id="title" placeholder="本のタイトルを入力" list="titleSuggestions" />
+    <!-- ▼ 未完了リスト表示エリア（照合ボタンで動的に表示） -->
+    <section id="unfinishedSection" style="display:none;">
+      <div class="unfinished-header">
+        <h2>未完了の読書一覧</h2>
+        <button id="closeUnfinishedBtn" title="閉じる">×</button>
+      </div>
+      <div id="unfinishedList"></div>
+    </section>
 
-    <div class="buttons">
-      <button id="startBtn" disabled>読書開始</button>
-      <button id="endBtn" disabled>読書終了</button>
-    </div>
+    <section class="card">
+      <details>
+        <summary>デバッグ／端末情報</summary>
+        <div class="kv"><span>Device ID</span><code id="deviceId"></code></div>
+        <div class="kv"><span>現在のReading ID</span><code id="currentReadingId"></code></div>
+        <div class="kv"><span>保留ID（pending）</span><code id="pendingList"></code></div>
+      </details>
+    </section>
+  </main>
 
-    <button id="clearTitlesBtn" class="sub">タイトル履歴をクリア</button>
-
-    <p id="status" class="status"></p>
-  </div>
-
-  <datalist id="titleSuggestions"></datalist>
-
-  <script src="script.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
