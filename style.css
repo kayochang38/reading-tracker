@@ -1,135 +1,310 @@
-/* --- ベース --- */
-body {
-  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
-  background-color: #fafafa;
-  margin: 0;
-  padding: 0;
-  color: #333;
-}
-
-/* --- レイアウト --- */
-.container {
-  max-width: 480px;
-  margin: 2em auto;
-  padding: 2em;
-  text-align: center;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/* --- 見出しとテキスト --- */
-h1 {
-  font-size: 1.6em;
-  margin-bottom: 0.8em;
-}
-
-p {
-  line-height: 1.6;
-  margin: 0.5em 0;
-}
-
-/* --- 入力フォーム --- */
-input[type="text"] {
-  width: 100%;
-  padding: 0.6em;
-  margin-top: 0.4em;
+* {
   box-sizing: border-box;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 1em;
 }
 
-/* --- 接続テストボタン（幅控えめ） --- */
-#testBtn {
-  width: auto;
-  padding: 0.6em;
-  margin-top: 0.6em;
-  background-color: #2196f3;
+body {
+  font-family: "Noto Sans JP", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+  margin: 0;
+  background-color: #D8E2D0; /* ミストグリーン */
+  color: #4A3B2A; /* ココアブラウン */
+  line-height: 1.6;
+  letter-spacing: 0.03em;
 }
 
-#testBtn:hover:not(:disabled) {
-  background-color: #1976d2;
+/* コンテナ全体（中央寄せ・紙風） */
+.container {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #F7F3E8; /* クリームベージュ */
+  border-radius: 10px;
+  border: 1px solid #B8C2AF; /* グレイッシュグリーン */
+  box-shadow: 0 4px 10px rgba(74, 59, 42, 0.1);
 }
 
-/* --- ボタン全体を同じ幅に整える --- */
-.buttons {
+/* タイトル行（アイコン＋タイトル） */
+h1 {
+  font-size: 28px;
+  text-align: center;
+  color: #4A3B2A;
+  font-weight: 700;
+  margin: 0 0 24px;
   display: flex;
-  justify-content: space-between;
-  gap: 0.6em;
-  margin-top: 1em;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-/* --- 共通ボタンスタイル --- */
+/* タイトル左のアイコン */
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #F7F3E8;
+  padding: 4px;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+  object-fit: contain;
+  filter: saturate(95%) contrast(105%);
+}
+
+/* 各セクションカード */
+.card {
+  background: #F7F3E8;
+  border: 1px solid #B8C2AF;
+  border-radius: 10px;
+  padding: 18px;
+  margin: 18px 0;
+  box-shadow: 0 2px 4px rgba(74,59,42,0.08);
+}
+
+/* ラベル */
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #4A3B2A;
+}
+
+/* ===== 入力欄（共通） ===== */
+input[type="text"],
+input[type="url"],
+#titleInput {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #B8C2AF;
+  border-radius: 6px;
+  background-color: #FAF8F2;
+  color: #4A3B2A;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+input:focus,
+#titleInput:focus {
+  outline: none;
+  border-color: #A5B9A1; /* 薄緑 */
+  box-shadow: 0 0 0 3px rgba(165,185,161,0.25);
+  background-color: #FAF8F2; /* 少し明るく */
+}
+
+.hint {
+  font-size: 13px;
+  color: #7B6E5A; /* モカグレージュ */
+}
+
+/* ===== ボタン群 ===== */
+.button-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 10px;
+}
+
 button {
-  flex: 1;
-  padding: 0.6em;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid #B8C2AF;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .1s ease-in-out;
+  color: #4A3B2A;
+  background: #E8CFC7; /* ピーチピンク */
+  box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+}
+
+button:hover:not(:disabled) {
+  background: #D7B8AF;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 4px rgba(0,0,0,0.1);
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ===== ボタン色バリエーション ===== */
+button.primary {
+  background: #A5B9A1;
+  border-color: #B8C2AF;
+  color: #fff;
+}
+button.primary:hover {
+  background: #92AC81;
+}
+
+button.secondary {
+  background: #E8CFC7;
+  color: #4A3B2A;
+}
+button.secondary:hover {
+  background: #D7B8AF;
+}
+
+button.danger {
+  background: #E6B5A9;
+  border-color: #C78F82;
+  color: #4A3B2A;
+}
+button.danger:hover {
+  background: #D49E91;
+}
+
+/* ===== ミュートボタン右寄せ ===== */
+#muteBtn {
+  margin-left: auto;
+  background-color: #C3D3C2; /* 薄緑寄りに */
+  color: #4A3B2A;
   border: none;
   border-radius: 6px;
-  background-color: #4caf50;
-  color: white;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+#muteBtn.muted {
+  background-color: #5A4632;
+  color: #FDF9F2;
 }
 
-/* --- 有効時のhover --- */
-button:hover:not(:disabled) {
-  background-color: #43a047;
+/* ===== タイトル履歴クリア＆ミュートボタンの幅統一 ===== */
+#clearHistoryBtn,
+#muteBtn {
+  width: 180px;          /* 横幅を統一 */
+  text-align: center;    /* テキスト中央寄せ */
+  white-space: nowrap;   /* 改行なし（1行表示） */
 }
 
-/* --- サブボタン（履歴クリア） --- */
-button.sub {
-  display: block;
-  width: 100%;
-  margin-top: 0.6em;
-  background-color: #9e9e9e;
-}
-
-button.sub:hover:not(:disabled) {
-  background-color: #757575;
-}
-
-/* --- 無効ボタン --- */
-button:disabled,
-.buttons button:disabled,
-button.sub:disabled {
-  background-color: #ccc;
-  color: #666;
-  cursor: not-allowed;
-  opacity: 0.8;
+/* ===== タイトル履歴をクリアボタン（控えめカラー） ===== */
+#clearHistoryBtn {
+  background-color: #EDE8E3; /* 彩度を落としたベージュ系 */
+  color: #6E5C4F;
+  border: 1px solid #CFC5B7;
   box-shadow: none;
-  pointer-events: none; /* ✅ hover・クリックを完全無効化 */
+  opacity: 0.9;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+#clearHistoryBtn:hover {
+  background-color: #E0D8CF;
+  opacity: 1;
 }
 
-/* --- ステータスメッセージ --- */
+/* ===== 照合ボタン（クリームイエロー） ===== */
+#verifyBtn {
+  background-color: #F8EEC0;
+  color: #4A3B2A;
+  border: 1px solid #D7C98E;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+#verifyBtn:hover {
+  background-color: #F2E3A1;
+  transform: translateY(-1px);
+}
+
+/* ===== タイトル入力エリア ===== */
+#titleInput {
+  background-color: #FAF8F2;
+}
+
+/* ===== 履歴エリア ===== */
+.history-wrap {
+  margin-top: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.history-wrap ul {
+  list-style: none;
+  padding-left: 18px;
+  margin: 6px 0;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.history-wrap li {
+  opacity: .9;
+  cursor: pointer;
+  padding: 2px 0;
+  border-bottom: 1px dotted #CBB69C;
+  color: #4A3B2A;
+}
+
+.history-wrap li:hover {
+  background: #F2E8E3;
+}
+
+/* ===== タイマー・状態表示 ===== */
+.timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 28px;
+  margin-top: 12px;
+  text-align: center;
+  color: #4A3B2A;
+  text-shadow: 0 1px 0 #F7F3E8;
+}
+
 .status {
-  margin-top: 0.8em;
-  font-size: 0.9em;
+  margin-top: 10px;
+  min-height: 24px;
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: #4A3B2A;
 }
 
-.success {
-  color: #2e7d32;
+/* ===== デバッグ表示 ===== */
+.kv {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
 }
 
-.error {
-  color: #c62828;
+code {
+  background: #E8CFC7;
+  border: 1px solid #B8C2AF;
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: #4A3B2A;
 }
 
-/* --- 区切り線 --- */
-hr {
-  margin: 1.5em 0;
+details {
+  border-top: 1px dashed #B8C2AF;
+  padding-top: 8px;
+  margin-top: 8px;
+  color: #4A3B2A;
+}
+
+/* ===== 「未完了の読書一覧」見出しの統一 ===== */
+h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4A3B2A; /* こげ茶（他ラベルと同じ） */
+  margin: 10px 0 8px;
+  padding: 0;
+}
+
+/* ===== 未完了一覧の閉じるボタン ===== */
+.unfinished-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+#closeUnfinishedBtn {
+  background: none;
   border: none;
-  border-top: 1px solid #ddd;
+  color: #4A3B2A;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
 
-/* --- モバイル対応 --- */
-@media (max-width: 480px) {
-  .buttons {
-    flex-direction: column;
-  }
-
-  .buttons button {
-    width: 100%;
-  }
+#closeUnfinishedBtn:hover {
+  background-color: rgba(0,0,0,0.05);
 }
