@@ -1,224 +1,356 @@
-// ===========================
-// 📚 Reading Tracker Script
-// ===========================
+// ====== Constants & Keys ======
+const RELAY_ENDPOINT = 'https://www.laboratomie.com/reading-tracker/relay.php';
+const LS_KEYS = {
+  sheetUrl: 'rt.sheet_url',
+  titleHistory: 'rt.title_history',
+  deviceId: 'rt.device_id',
+  pendingIds: 'rt.pending_ids',
+  seq: (yyyyMMdd) => `rt.seq.${yyyyMMdd}`,
+};
+const SS_KEYS = { session: 'rt.session' };
 
-// --- 要素取得 ---
-const sheetUrlInput = document.getElementById("sheetUrl");
-const testBtn = document.getElementById("testBtn");
-const connectionStatus = document.getElementById("connectionStatus");
-
-const titleInput = document.getElementById("title");
-const startBtn = document.getElementById("startBtn");
-const endBtn = document.getElementById("endBtn");
-const statusMsg = document.getElementById("status");
-
-const clearBtn = document.getElementById("clearTitlesBtn");
-const suggestionList = document.getElementById("titleSuggestions");
-
-// --- 初期化 ---
-let gasUrl = "";
-let sessionId = null;
-let savedTitles = JSON.parse(localStorage.getItem("titles") || "[]");
-
-// 初期UI設定
-updateClearButtonState();
-loadSavedSheetUrl();
-populateTitleSuggestions();
-
-// ===========================
-// 🚀 スプレッドシート接続テスト
-// ===========================
-testBtn.addEventListener("click", async () => {
-  const sheetUrl = sheetUrlInput.value.trim();
-  if (!sheetUrl) {
-    alert("スプレッドシートのURLを入力してください。");
-    return;
+// ====== Audio / Mute System ======
+let isMuted = localStorage.getItem('rt.is_muted') === 'true';
+function playSound(name) {
+  if (isMuted) return;
+  const audio = new Audio(`./${name}.mp3`);
+  audio.play().catch(() => {});
+}
+function toggleMute() {
+  isMuted = !isMuted;
+  localStorage.setItem('rt.is_muted', String(isMuted));
+  updateMuteButton();
+}
+function updateMuteButton() {
+  const btn = document.querySelector('#muteBtn');
+  if (!btn) return;
+  if (isMuted) {
+    btn.classList.add('muted');
+    btn.classList.remove('unmuted');
+    btn.textContent = '🔇 ミュート中';
+  } else {
+    btn.classList.add('unmuted');
+    btn.classList.remove('muted');
+    btn.textContent = '🔈 ミュート解除中';
   }
+}
 
-  try {
-    connectionStatus.textContent = "接続を確認中...";
-    connectionStatus.className = "status";
+// ====== Utilities ======
+const $ = (sel) => document.querySelector(sel);
+const pad2 = (n) => String(n).padStart(2, '0');
+function todayYMD() {
+  const d = new Date();
+  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+}
+function todayD6() {
+  const d = new Date();
+  return `${String(d.getFullYear()).slice(-2)}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+}
+function ensureDeviceId() {
+  let did = localStorage.getItem(LS_KEYS.deviceId);
+  if (!did) {
+    const rand4 = Math.floor(1000 + Math.random()*9000);
+    did = `D-${todayD6()}-${rand4}`;
+    localStorage.setItem(LS_KEYS.deviceId, did);
+  }
+  return did;
+}
+function nextSeq(did) {
+  const ymd = todayYMD();
+  const key = LS_KEYS.seq(ymd);
+  let n = Number(localStorage.getItem(key) || '0') + 1;
+  localStorage.setItem(key, String(n));
+  return String(n).padStart(4, '0');
+}
+function buildReadingId(did) {
+  return `R${todayYMD()}-${did}-${nextSeq(did)}`;
+}
+function setStatus(msg, color) {
+  const el = $('#status');
+  el.textContent = msg || '';
+  el.style.color = color || '#3e2f1c';
+}
 
-    const response = await fetch(getGasExecUrl(), {
-      method: "POST",
-      body: JSON.stringify({ action: "test", sheetUrl }),
-    });
+// ====== POST (URLエンコード版・最終安定形) ======
+async function postToRelay(payload) {
+  const params = new URLSearchParams();
+  for (const key in payload) params.append(key, payload[key]);
+  const res = await fetch(RELAY_ENDPOINT, { method: 'POST', body: params });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
 
-    const result = await response.text();
-    console.log("接続テスト結果:", result);
+// ====== Logic ======
+window.addEventListener('DOMContentLoaded', () => {
+  // ===== 初期化 =====
+  updateMuteButton();
+  $('#muteBtn').onclick = toggleMute;
 
-    if (result === "OK_EDITABLE") {
-      connectionStatus.textContent = "✅ 接続成功（編集権限あり）";
-      connectionStatus.className = "status success";
-      localStorage.setItem("sheetUrl", sheetUrl);
-      gasUrl = getGasExecUrl();
-      startBtn.disabled = false;
+  const did = ensureDeviceId();
+  $('#deviceId').textContent = did;
+  $('#endBtn').disabled = true;
 
-    } else if (result === "ERROR_NO_PERMISSION") {
-      connectionStatus.textContent = "⚠️ スプレッドシートは閲覧専用のため接続できません。";
-      connectionStatus.className = "status error";
-      startBtn.disabled = true;
+  // ===== タイトル履歴 =====
+  function loadTitleHistory() {
+    const titles = JSON.parse(localStorage.getItem('rt.titles') || '[]');
+    const list = $('#titleHistory');
+    list.innerHTML = titles.length
+      ? titles.map((t) => `<li>${t}</li>`).join('')
+      : '<li class="empty">履歴はありません</li>';
+  }
+  loadTitleHistory();
 
-    } else if (result === "ERROR_NO_ACCESS") {
-      connectionStatus.textContent = "❌ スプレッドシートが非公開のためアクセスできません。";
-      connectionStatus.className = "status error";
-      startBtn.disabled = true;
-
-    } else if (result === "ERROR_INVALID_SHEET") {
-      connectionStatus.textContent = "❌ URLが無効またはスプレッドシートが存在しません。";
-      connectionStatus.className = "status error";
-      startBtn.disabled = true;
-
-    } else {
-      connectionStatus.textContent = "❌ 予期しないエラーが発生しました。";
-      connectionStatus.className = "status error";
-      startBtn.disabled = true;
+  $('#titleHistory').addEventListener('click', (e) => {
+    if (e.target.tagName === 'LI' && !e.target.classList.contains('empty')) {
+      $('#titleInput').value = e.target.textContent;
     }
-  } catch (error) {
-    console.error(error);
-    connectionStatus.textContent = "❌ 通信エラーが発生しました。";
-    connectionStatus.className = "status error";
-  }
-});
+  });
 
-// ===========================
-// 📖 読書開始
-// ===========================
-startBtn.addEventListener("click", async () => {
-  const title = titleInput.value.trim();
-  if (!title) {
-    alert("タイトルを入力してください。");
-    return;
-  }
+  $('#clearHistoryBtn').onclick = () => {
+    localStorage.removeItem('rt.titles');
+    loadTitleHistory();
+    setStatus('タイトル履歴をクリアしました。', '#555');
+  };
 
-  const sheetUrl = sheetUrlInput.value.trim() || localStorage.getItem("sheetUrl");
-  if (!sheetUrl) {
-    alert("スプレッドシートのURLが設定されていません。");
-    return;
-  }
-
-  try {
-    statusMsg.textContent = "開始を記録中...";
-    const response = await fetch(getGasExecUrl(), {
-      method: "POST",
-      body: JSON.stringify({ action: "start", title, sheetUrl }),
+  // ===== Enterキーで開始 =====
+  const titleInput = $('#titleInput');
+  if (titleInput) {
+    titleInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        $('#startBtn').click();
+      }
     });
+  }
 
-    const result = await response.text();
-    if (result && result !== "Invalid action") {
-      sessionId = result;
-      statusMsg.textContent = "📗 読書中...";
-      statusMsg.className = "status success";
+  // ===== 開始 =====
+  $('#startBtn').onclick = async () => {
+    const title = $('#titleInput').value.trim();
+    if (!title) {
+      setStatus('タイトルを入力してください。', '#b62324');
+      playSound('alert');
+      return;
+    }
 
-      startBtn.disabled = true;
-      endBtn.disabled = false;
+    let sheetUrl = $('#sheetUrl').value.trim().replace(/[\?#].*$/, '');
+    if (!/\/edit$/.test(sheetUrl)) sheetUrl += '/edit';
+    localStorage.setItem(LS_KEYS.sheetUrl, sheetUrl);
 
-      // タイトルを履歴に保存
-      if (!savedTitles.includes(title)) {
-        savedTitles.push(title);
-        localStorage.setItem("titles", JSON.stringify(savedTitles));
-        populateTitleSuggestions();
+    const readingId = buildReadingId(did);
+    const startTsISO = new Date().toISOString();
+
+    const payload = {
+      mode: 'append_start',
+      sheetUrl,
+      id: readingId,
+      device: did,
+      title,
+      startTimeISO: startTsISO,
+    };
+
+    try {
+      setStatus('開始を送信中…');
+      const json = await postToRelay(payload);
+      if (json?.ok) {
+        playSound('clear');
+        setStatus(`開始しました：${readingId}`);
+        localStorage.setItem('rt.currentId', readingId);
+        if (json.sheet) localStorage.setItem('rt.sheetName', json.sheet);
+        $('#currentReadingId').textContent = readingId;
+
+        // ✅ 開始時に未完了一覧を閉じる
+        const section = document.querySelector('#unfinishedSection');
+        const list = document.querySelector('#unfinishedList');
+        if (section) section.style.display = 'none';
+        if (list) list.innerHTML = '';
+
+        let titles = JSON.parse(localStorage.getItem('rt.titles') || '[]');
+        if (!titles.includes(title)) {
+          titles.unshift(title);
+          titles = titles.slice(0, 10);
+        }
+        localStorage.setItem('rt.titles', JSON.stringify(titles));
+        loadTitleHistory();
+
+        $('#endBtn').disabled = false;
+      } else {
+        playSound('alert');
+        setStatus('⚠️ 開始送信に失敗しました。', '#b62324');
+      }
+    } catch (e) {
+      playSound('alert');
+      setStatus('通信エラー：relay.phpに接続できません。', '#b62324');
+    }
+  };
+
+  // ===== 終了 =====
+  $('#endBtn').onclick = async () => {
+    const sheetUrl = $('#sheetUrl').value.trim();
+    const currentId = localStorage.getItem('rt.currentId');
+    if (!sheetUrl || !currentId) {
+      setStatus('⚠️ 開始データが見つかりません。', '#b62324');
+      return;
+    }
+
+    const payload = {
+      mode: 'append_end',
+      sheetUrl,
+      id: currentId,
+      endTimeISO: new Date().toISOString(),
+    };
+
+    try {
+      setStatus('終了を送信中…');
+      const json = await postToRelay(payload);
+      if (json?.ok) {
+        playSound('clear');
+        setStatus(`終了しました：${currentId}`);
+        localStorage.removeItem('rt.currentId');
+        $('#currentReadingId').textContent = '(なし)';
+        $('#endBtn').disabled = true;
+
+        // 一覧をクリア（安全措置）
+        const section = document.querySelector('#unfinishedSection');
+        if (section) section.style.display = 'none';
+        const list = document.querySelector('#unfinishedList');
+        if (list) list.innerHTML = '';
+
+        // ✅ 開始ボタンを再度有効化
+        $('#startBtn').disabled = false;
+      } else {
+        playSound('alert');
+        setStatus('⚠️ 終了送信に失敗しました。', '#b62324');
+      }
+    } catch (e) {
+      playSound('alert');
+      setStatus('通信エラー：relay.phpに接続できません。', '#b62324');
+    }
+  };
+
+  // ===== 照合（未完了一覧） =====
+  $('#verifyBtn').onclick = async () => {
+    setStatus('照合中…');
+    try {
+      const sheetUrl = $('#sheetUrl').value.trim();
+      if (!sheetUrl) {
+        setStatus('スプレッドシートURLを入力してください。', '#b62324');
+        return;
       }
 
-      updateClearButtonState(); // ✅ 履歴追加後に有効化
-    } else {
-      throw new Error(result);
+      const json = await postToRelay({
+        mode: 'verify',
+        sheetUrl,
+        device: ensureDeviceId(),
+      });
+
+      const section = $('#unfinishedSection');
+      const list = $('#unfinishedList');
+      list.innerHTML = '';
+
+      if (json?.ok && json.unfinished?.length) {
+        section.style.display = 'block';
+        list.innerHTML = json.unfinished.map(item => `
+          <div class="unfinished-card" data-id="${item.ID}" data-row="${item.row}">
+            <p>📘 <strong>${item.Title}</strong></p>
+            <p>開始：${new Date(item.StartTime).toLocaleString('ja-JP')}</p>
+            <div class="button-row">
+              <button class="continueBtn primary">続ける</button>
+              <button class="finishBtn secondary">終了する</button>
+              <button class="deleteBtn danger">削除</button>
+            </div>
+          </div>
+        `).join('');
+
+        setStatus(`未完了の読書が ${json.unfinished.length} 件あります。`);
+
+        // ===== 続ける =====
+        list.querySelectorAll('.continueBtn').forEach(btn => {
+          btn.onclick = e => {
+            const card = e.target.closest('.unfinished-card');
+            const title = card.querySelector('strong').textContent;
+            const id = card.dataset.id;
+            $('#titleInput').value = title;
+            $('#endBtn').disabled = false;
+            $('#startBtn').disabled = true;
+            localStorage.setItem('rt.currentId', id);
+            localStorage.setItem('rt.lastTitle', title);
+            setStatus(`読書を再開中：${title}`);
+
+            // 一覧を即非表示
+            section.style.display = 'none';
+            list.innerHTML = '';
+          };
+        });
+
+        // ===== 終了する =====
+        list.querySelectorAll('.finishBtn').forEach(btn => {
+          btn.onclick = async e => {
+            const card = e.target.closest('.unfinished-card');
+            const id = card.dataset.id;
+            const json = await postToRelay({
+              mode: 'append_end',
+              sheetUrl,
+              id,
+              device: ensureDeviceId(),
+              endTimeISO: new Date().toISOString(),
+            });
+            if (json.ok) {
+              card.remove();
+              setStatus(`「${card.querySelector('strong').textContent}」を終了しました。`);
+              // 一覧が空なら非表示
+              if (list.children.length === 0) {
+                section.style.display = 'none';
+                list.innerHTML = '';
+              }
+              // ✅ 開始ボタンを再び有効化
+              $('#startBtn').disabled = false;
+            }
+          };
+        });
+
+        // ===== 削除 =====
+        list.querySelectorAll('.deleteBtn').forEach(btn => {
+          btn.onclick = async e => {
+            const card = e.target.closest('.unfinished-card');
+            const row = card.dataset.row;
+            const json = await postToRelay({
+              mode: 'delete_row',
+              sheetUrl,
+              row,
+            });
+            if (json.ok) {
+              card.remove();
+              setStatus(`「${card.querySelector('strong').textContent}」の記録を削除しました。`);
+              // 一覧が空なら非表示
+              if (list.children.length === 0) {
+                section.style.display = 'none';
+                list.innerHTML = '';
+              }
+              // ✅ 開始ボタンを再び有効化
+              $('#startBtn').disabled = false;
+            }
+          };
+        });
+
+      } else {
+        section.style.display = 'none';
+        setStatus('未完了の読書はありません。');
+      }
+    } catch (e) {
+      console.error(e);
+      setStatus('通信エラー：relay.phpに接続できません。', '#b62324');
     }
-  } catch (error) {
-    console.error(error);
-    statusMsg.textContent = "❌ 開始に失敗しました";
-    statusMsg.className = "status error";
-  }
-});
+  };
 
-// ===========================
-// 📕 読書終了
-// ===========================
-endBtn.addEventListener("click", async () => {
-  if (!sessionId) {
-    alert("開始セッションがありません。");
-    return;
-  }
-
-  try {
-    statusMsg.textContent = "終了を記録中...";
-    const sheetUrl = sheetUrlInput.value.trim() || localStorage.getItem("sheetUrl");
-
-    const response = await fetch(getGasExecUrl(), {
-      method: "POST",
-      body: JSON.stringify({ action: "end", sessionId, sheetUrl }),
-    });
-
-    const result = await response.text();
-    if (result.includes("End logged")) {
-      statusMsg.textContent = "✅ 終了を記録しました";
-      statusMsg.className = "status success";
-      startBtn.disabled = false;
-      endBtn.disabled = true;
-      sessionId = null;
-    } else {
-      throw new Error(result);
-    }
-  } catch (error) {
-    console.error(error);
-    statusMsg.textContent = "❌ 終了に失敗しました";
-    statusMsg.className = "status error";
-  }
-});
-
-// ===========================
-// 🧹 履歴クリア機能
-// ===========================
-clearBtn.addEventListener("click", () => {
-  if (savedTitles.length === 0) return;
-
-  const confirmClear = confirm("タイトル履歴をすべて削除しますか？");
-  if (!confirmClear) return;
-
-  savedTitles = [];
-  localStorage.removeItem("titles");
-  suggestionList.innerHTML = "";
-  updateClearButtonState(); // ✅ 無効化
-});
-
-// ===========================
-// 🧩 関連関数
-// ===========================
-
-// GAS実行URL（公開済みWebアプリURL）
-function getGasExecUrl() {
-  // 公開URLをここに設定（例）
-  return "https://script.google.com/macros/s/AKfycbxi-4SNxOb-DTf0L2YC3COLhkCkrBzhJHzCk85fi7a8XTPiR6BKkCCQFhLqckrK3P6X/exec";
-}
-
-// スプレッドシートURLの読み込み
-function loadSavedSheetUrl() {
-  const savedUrl = localStorage.getItem("sheetUrl");
-  if (savedUrl) {
-    sheetUrlInput.value = savedUrl;
-    gasUrl = getGasExecUrl();
-    startBtn.disabled = false;
-  }
-}
-
-// 履歴からサジェストを再生成
-function populateTitleSuggestions() {
-  suggestionList.innerHTML = "";
-  savedTitles.forEach((t) => {
-    const option = document.createElement("option");
-    option.value = t;
-    suggestionList.appendChild(option);
-  });
-}
-
-// 履歴クリアボタンの有効・無効切り替え
-function updateClearButtonState() {
-  clearBtn.disabled = savedTitles.length === 0;
-}
-
-// Enterキーで「読書開始」を押せるように
-titleInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter" && !startBtn.disabled) {
-    startBtn.click();
+  // ===== 手動で未完了一覧を閉じる =====
+  const closeBtn = document.querySelector('#closeUnfinishedBtn');
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      const section = document.querySelector('#unfinishedSection');
+      const list = document.querySelector('#unfinishedList');
+      if (section) section.style.display = 'none';
+      if (list) list.innerHTML = '';
+      setStatus('未完了一覧を閉じました。');
+    };
   }
 });
