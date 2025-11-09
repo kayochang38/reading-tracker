@@ -141,4 +141,4 @@ reading-tracker/
 
 ## 🪄 License
 MIT License  
-(c) 2025 Miho (kayochang38)
+(c) 2025 kayochang38
